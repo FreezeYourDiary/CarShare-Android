@@ -16,6 +16,16 @@ interface UserDao {
     @Query("SELECT * FROM users WHERE email = :email AND password = :password LIMIT 1") // basic login?
     suspend fun login(email: String, password: String): User?
 
+    @Query("SELECT * FROM users WHERE email = :email LIMIT 1")
+    suspend fun findByEmail(email: String): User?
+
     @Query("SELECT * FROM users")
     suspend fun getAll(): List<User>
+
+    @Query("DELETE FROM users")
+    suspend fun deleteAll()
+
+    @Query("SELECT * FROM users WHERE id = :userId LIMIT 1")
+    suspend fun getUserById(userId: Int): User?
+    // flow return type for in real time data?
 }

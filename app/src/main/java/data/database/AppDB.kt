@@ -4,17 +4,23 @@ import android.content.Context
 import androidx.room.Database
 import androidx.room.Room
 import androidx.room.RoomDatabase
-import data.dao.UserDao
-import data.entities.User
 
-@Database(entities = [User::class], version = 1)
+import data.dao.*
+import data.entities.*
+
+@Database(
+    entities = [User::class, Car::class, Trip::class, Location::class],
+    version = 3
+)
 abstract class AppDB : RoomDatabase() {
     abstract fun userDao(): UserDao
-    // abstract fun carDao(): CarDao // car info[name, year, color, state, plate, etc.]
-    // abstract fun tripDao(): CarDao  // trip info[startLocation : locationDao, endLocation, users : UserDao, planned time] + func to match locations
-    // abstract fun locationDao(): CarDao // location info[address, coords?, name(adress)]
+    abstract fun carDao(): CarDao
+    abstract fun tripDao(): TripDao
+    abstract fun locationDao(): LocationDao
+
     companion object {
-        @Volatile private var INSTANCE: AppDB? = null
+        @Volatile
+        private var INSTANCE: AppDB? = null
 
         fun getDatabase(context: Context): AppDB {
             return INSTANCE ?: synchronized(this) {
@@ -23,10 +29,8 @@ abstract class AppDB : RoomDatabase() {
                     AppDB::class.java,
                     "carshare_db"
                 )
-                    .fallbackToDestructiveMigration(true)
-                    // przy update (np dodaniu) nowych var w tabelach, dodaniu nowych tabel.
+                    //.fallbackToDestructiveMigration(true)
                     .build().also { INSTANCE = it }
-
             }
         }
     }
