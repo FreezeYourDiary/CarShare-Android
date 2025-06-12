@@ -29,7 +29,7 @@ abstract class AppDB : RoomDatabase() {
                     AppDB::class.java,
                     "carshare_db"
                 )
-                    //.fallbackToDestructiveMigration(true)
+                    .fallbackToDestructiveMigration(true)
                     .build().also { INSTANCE = it }
             }
         }
