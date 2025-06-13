@@ -10,7 +10,7 @@ import data.entities.*
 
 @Database(
     entities = [User::class, Car::class, Trip::class, Location::class],
-    version = 3
+    version = 4
 )
 abstract class AppDB : RoomDatabase() {
     abstract fun userDao(): UserDao

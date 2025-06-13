@@ -238,7 +238,7 @@ fun UserPanel(db: AppDB, onBack: () -> Unit) {
                     userId != null
                 ) {
                     val carYear = year.toIntOrNull()
-                    if (carYear == null || carYear <= 0) {
+                    if (carYear == null || carYear <= 1900 || carYear > 2025) {
                         Toast.makeText(context, "Please enter a valid year.", Toast.LENGTH_SHORT).show()
                         return@Button
                     }
