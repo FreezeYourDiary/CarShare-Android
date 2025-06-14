@@ -64,7 +64,7 @@ class MainActivity : ComponentActivity() {
             val locs = locDao.getAll()
             locs.forEach { loc ->
                 Log.d(
-                    "LOCATIONS", "Loc id= ${loc.id}, addr=${loc.address}"
+                    "LOCATIONS", "Loc id= ${loc.id}, name=${loc.name}, addr=${loc.address}, lat=${loc.latitude}, long=${loc.longitude}"
                 )
             }
         }
@@ -90,6 +90,7 @@ class MainActivity : ComponentActivity() {
 
                 // ONLY MAIN SCREEEN --- ONLY PLANNED TRIPS
                 var tripsMainScreen by remember { mutableStateOf<List<Trip>>(emptyList()) }
+                // dict id - name
                 var locationsOnMainScreen by remember { mutableStateOf<Map<Int, String>>(emptyMap()) }
                 // coloring lists on ms
                 var userDriverTrips by remember { mutableStateOf<Set<Long>>(emptySet()) }
@@ -125,6 +126,7 @@ class MainActivity : ComponentActivity() {
                 LaunchedEffect(UserSession.currentUserId) {
                     // planned trips fetch dla main screen
                     // uproszczono do naprawy .! wyszukac lokalizacje
+                    // update user logged in state var
                     loggedIn = UserSession.currentUserId != null
                 }
 
@@ -174,7 +176,7 @@ class MainActivity : ComponentActivity() {
 
                                         if (loggedIn) {
                                             DropdownMenuItem(
-                                                text = { Text("cars") },
+                                                text = { Text("Cars") },
                                                 onClick = {
                                                     showMenu = false
                                                     showUserPanel = true
@@ -183,7 +185,7 @@ class MainActivity : ComponentActivity() {
                                                 }
                                             )
                                             DropdownMenuItem(
-                                                text = { Text("my profile") },
+                                                text = { Text("My Profile") },
                                                 onClick = {
                                                     showMenu = false
                                                     showUserInfo = true
@@ -192,7 +194,7 @@ class MainActivity : ComponentActivity() {
                                                 }
                                             )
                                             DropdownMenuItem(
-                                                text = { Text("logout") },
+                                                text = { Text("Logout") },
                                                 onClick = {
                                                     showMenu = false
                                                     coroutineScope.launch {
@@ -350,10 +352,10 @@ class MainActivity : ComponentActivity() {
                                                             )
                                                             Spacer(modifier = Modifier.height(4.dp))
                                                             Text(
-                                                                text = "From: ${locationsOnMainScreen[trip.startLocationId]}"
+                                                                text = "From: ${locationsOnMainScreen[trip.startLocationId] ?: "N/A"}"
                                                             )
                                                             Text(
-                                                                text = "To: ${locationsOnMainScreen[trip.endLocationId]}"
+                                                                text = "To: ${locationsOnMainScreen[trip.endLocationId] ?: "N/A"}"
                                                             )
                                                             Spacer(modifier = Modifier.height(4.dp))
                                                             Text(
@@ -374,11 +376,22 @@ class MainActivity : ComponentActivity() {
                                     JoinTripDialog(
                                         db = database,
                                         trip = tripToJoin,
+                                        locationsMap = locationsOnMainScreen, // mapp passes
                                         onDismiss = { showJoinTripDialogForTrip = null },
                                         onJoinSuccess = {
                                             coroutineScope.launch {
+                                                // refetching teoretycznie nie powinno zachodzic
                                                 val fetchedPlannedTrips = database.tripDao().getTripsByState("planned")
                                                 tripsMainScreen = fetchedPlannedTrips
+
+                                                val locationIds = fetchedPlannedTrips.flatMap { listOf(it.startLocationId, it.endLocationId) }.toSet()
+                                                val locMap = mutableMapOf<Int, String>()
+                                                locationIds.forEach { id ->
+                                                    val location = database.locationDao().getById(id)
+                                                    location?.let { locMap[id] = it.name }
+                                                }
+                                                locationsOnMainScreen = locMap
+
 
                                                 val currentUserId = UserSession.currentUserId
                                                 if (currentUserId != null) {
@@ -393,15 +406,15 @@ class MainActivity : ComponentActivity() {
                                                 }
                                             }
                                             showJoinTripDialogForTrip = null
-                                            Toast.makeText(context, "joined Trip #${tripToJoin.id}!", Toast.LENGTH_SHORT).show()
+                                            Toast.makeText(context, "Joined Trip #${tripToJoin.id}!", Toast.LENGTH_SHORT).show()
                                         },
                                         onAlreadyJoined = {
                                             showJoinTripDialogForTrip = null
-                                            Toast.makeText(context, "!!You have registered and then cancelled", Toast.LENGTH_SHORT).show()
+                                            Toast.makeText(context, "You are already registered for this trip or have cancelled previously.", Toast.LENGTH_SHORT).show()
                                         },
                                         onTripFull = {
                                             showJoinTripDialogForTrip = null
-                                            Toast.makeText(context, "trip is full.", Toast.LENGTH_SHORT).show()
+                                            Toast.makeText(context, "This trip is full.", Toast.LENGTH_SHORT).show()
                                         },
                                         isDriver = userDriverTrips.contains(tripToJoin.id),
                                         isPassenger = userPassengerTrips.contains(tripToJoin.id)
@@ -421,6 +434,7 @@ class MainActivity : ComponentActivity() {
 fun JoinTripDialog(
     db: AppDB,
     trip: Trip,
+    locationsMap: Map<Int, String>, // Accept the locations map
     onDismiss: () -> Unit,
     onJoinSuccess: () -> Unit,
     onAlreadyJoined: () -> Unit,
@@ -431,17 +445,20 @@ fun JoinTripDialog(
     val coroutineScope = rememberCoroutineScope()
     val currentUserId = UserSession.currentUserId
 
+    val startLocationName = locationsMap[trip.startLocationId] ?: "N/a"
+    val endLocationName = locationsMap[trip.endLocationId] ?: "N/a"
+
     AlertDialog(
         onDismissRequest = onDismiss,
         title = { Text("Join Trip #${trip.id}?") },
         text = {
             Column {
-                Text("From: ${trip.startLocationId} To: ${trip.endLocationId}")
+                Text("From: $startLocationName To: $endLocationName")
                 Text("Time: ${trip.plannedHour}:00")
                 Text("Available seats: ${trip.passengerCapacity - trip.currentPassengers}")
                 Spacer(modifier = Modifier.height(8.dp))
                 if (isDriver) {
-                    Text("You are the driver of this trip.", color = MaterialTheme.colorScheme.primary)
+                    Text("You are already registered for this trip or have cancelled previously.", color = MaterialTheme.colorScheme.primary)
                 } else if (isPassenger) {
                     Text("You are already a passenger on this trip.", color = MaterialTheme.colorScheme.primary)
                 } else if (trip.currentPassengers >= trip.passengerCapacity) {
@@ -475,7 +492,7 @@ fun JoinTripDialog(
                         onTripFull()
                     }
                 },
-                enabled = canJoin // Only enable if eligible to join
+                enabled = canJoin
             ) {
                 Text("Join")
             }

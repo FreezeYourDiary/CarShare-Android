@@ -64,4 +64,11 @@ dependencies {
 
     implementation("androidx.room:room-runtime:$room_version")
     ksp("androidx.room:room-compiler:$room_version")
+    // google-maps-compose
+    implementation ("com.google.maps.android:maps-compose:2.11.2")
+    implementation("com.google.android.gms:play-services-maps:18.2.0")
+    // implementation("com.google.android.libraries.places:places:3.4.0")
+
+
+
 }

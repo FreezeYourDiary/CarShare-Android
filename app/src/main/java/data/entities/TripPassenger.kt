@@ -22,7 +22,7 @@ import androidx.room.PrimaryKey
         )
     ],
     indices = [
-        Index(value = ["tripId", "passengerId"], unique = true) 
+        Index(value = ["tripId", "passengerId"], unique = true)
     ]
 )
 data class TripPassenger(
