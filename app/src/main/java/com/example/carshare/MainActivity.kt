@@ -18,16 +18,17 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.lifecycleScope
 import com.example.carshare.session.UserSession
 import com.example.carshare.ui.screens.*
 import com.example.carshare.ui.theme.CarShareTheme
-import data.dao.LocationDao
 import data.database.AppDB
 import data.entities.Car
 import data.entities.Trip
+import data.entities.TripPassenger
 import kotlinx.coroutines.launch
 
 class MainActivity : ComponentActivity() {
@@ -41,6 +42,7 @@ class MainActivity : ComponentActivity() {
         val carDao = db.carDao()
         val tripDao = db.tripDao()
         val locDao = db.locationDao()
+
         lifecycleScope.launch {
             val users = userDao.getAll()
             users.forEach { user ->
@@ -70,39 +72,59 @@ class MainActivity : ComponentActivity() {
         setContent {
             CarShareTheme {
                 val context = LocalContext.current
-                val database = remember { AppDB.getDatabase(context) } // weird db issue fix??
+                val database = remember { AppDB.getDatabase(context) }
                 val coroutineScope = rememberCoroutineScope()
-
-                // screen control
+                // Screen control
                 var showLogin by remember { mutableStateOf(false) }
-                // changes of its value aktualizuje w ui
                 var showRegister by remember { mutableStateOf(false) }
-                var showPostTrip by remember { mutableStateOf(false) } // find to post -- find main screen
+                var showPostTrip by remember { mutableStateOf(false) }
                 var showUserPanel by remember { mutableStateOf(false) }
                 var showUserInfo by remember { mutableStateOf(false) }
                 var showCarDetail by remember { mutableStateOf<Car?>(null) }
                 var loggedIn by remember { mutableStateOf(UserSession.currentUserId != null) }
+                // mytrips - tripviewscreen
+                var showMyTripsScreen by remember { mutableStateOf(false) }
+                // join trip dialog
+                var showJoinTripDialogForTrip by remember { mutableStateOf<Trip?>(null) }
 
-                var trips by remember { mutableStateOf<List<Trip>>(emptyList()) }
-                val expandedTripIds = remember { mutableStateListOf<Long>() }
-                var locationsMap by remember { mutableStateOf<Map<Int, String>>(emptyMap()) }
 
-                // data loading block
-                LaunchedEffect(Unit) {
-                    // planned trips fetch dla main screen
-                    // uproszczono do naprawy .! wyszukac lokalizacje
-                    trips = database.tripDao().getTripsByState("planned")
+                // ONLY MAIN SCREEEN --- ONLY PLANNED TRIPS
+                var tripsMainScreen by remember { mutableStateOf<List<Trip>>(emptyList()) }
+                var locationsOnMainScreen by remember { mutableStateOf<Map<Int, String>>(emptyMap()) }
+                // coloring lists on ms
+                var userDriverTrips by remember { mutableStateOf<Set<Long>>(emptySet()) }
+                var userPassengerTrips by remember { mutableStateOf<Set<Long>>(emptySet()) }
 
-                    // location ids from trips
-                    val locationIds = trips.flatMap { listOf(it.startLocationId, it.endLocationId) }.toSet()
+
+                LaunchedEffect(loggedIn) {
+                    val fetchedPlannedTrips = database.tripDao().getTripsByState("planned")
+                    tripsMainScreen = fetchedPlannedTrips
+
+                    val locationIds = fetchedPlannedTrips.flatMap { listOf(it.startLocationId, it.endLocationId) }.toSet()
                     val locMap = mutableMapOf<Int, String>()
                     locationIds.forEach { id ->
                         val location = database.locationDao().getById(id)
                         location?.let { locMap[id] = it.name }
                     }
-                    locationsMap = locMap
+                    locationsOnMainScreen = locMap
+
+                    val currentUserId = UserSession.currentUserId
+                    if (currentUserId != null) {
+                        val allUserTrips = database.tripDao().getTripsWithUser(currentUserId.toLong())
+                        userDriverTrips = allUserTrips.filter { it.userId == currentUserId.toInt() }.map { it.id }.toSet()
+                        val passengerTrips = database.tripPassengerDao().getTripsForPassenger(
+                            currentUserId.toLong()
+                        )
+                        userPassengerTrips = passengerTrips.map { it.tripId }.toSet()
+                    } else {
+                        userDriverTrips = emptySet()
+                        userPassengerTrips = emptySet()
+                    }
                 }
+
                 LaunchedEffect(UserSession.currentUserId) {
+                    // planned trips fetch dla main screen
+                    // uproszczono do naprawy .! wyszukac lokalizacje
                     loggedIn = UserSession.currentUserId != null
                 }
 
@@ -136,7 +158,7 @@ class MainActivity : ComponentActivity() {
                                                     showMenu = false
                                                     showLogin = true
                                                     showRegister = false; showPostTrip = false; showUserPanel = false;
-                                                    showUserInfo = false; showCarDetail = null
+                                                    showUserInfo = false; showCarDetail = null; showMyTripsScreen = false; showJoinTripDialogForTrip = null
                                                 }
                                             )
                                             DropdownMenuItem(
@@ -145,7 +167,7 @@ class MainActivity : ComponentActivity() {
                                                     showMenu = false
                                                     showRegister = true
                                                     showLogin = false; showPostTrip = false; showUserPanel = false;
-                                                    showUserInfo = false; showCarDetail = null
+                                                    showUserInfo = false; showCarDetail = null; showMyTripsScreen = false; showJoinTripDialogForTrip = null
                                                 }
                                             )
                                         }
@@ -157,7 +179,7 @@ class MainActivity : ComponentActivity() {
                                                     showMenu = false
                                                     showUserPanel = true
                                                     showLogin = false; showRegister = false; showPostTrip = false;
-                                                    showUserInfo = false; showCarDetail = null
+                                                    showUserInfo = false; showCarDetail = null; showMyTripsScreen = false; showJoinTripDialogForTrip = null
                                                 }
                                             )
                                             DropdownMenuItem(
@@ -166,7 +188,7 @@ class MainActivity : ComponentActivity() {
                                                     showMenu = false
                                                     showUserInfo = true
                                                     showLogin = false; showRegister = false; showPostTrip = false;
-                                                    showUserPanel = false; showCarDetail = null
+                                                    showUserPanel = false; showCarDetail = null; showMyTripsScreen = false; showJoinTripDialogForTrip = null
                                                 }
                                             )
                                             DropdownMenuItem(
@@ -176,9 +198,8 @@ class MainActivity : ComponentActivity() {
                                                     coroutineScope.launch {
                                                         UserSession.currentUserId = null
                                                         loggedIn = false
-                                                        // on main screen
                                                         showLogin = false; showRegister = false; showPostTrip = false;
-                                                        showUserPanel = false; showUserInfo = false; showCarDetail = null
+                                                        showUserPanel = false; showUserInfo = false; showCarDetail = null; showMyTripsScreen = false; showJoinTripDialogForTrip = null
                                                         Toast.makeText(context, "Logged out", Toast.LENGTH_SHORT).show()
                                                     }
                                                 }
@@ -186,16 +207,15 @@ class MainActivity : ComponentActivity() {
                                         }
                                     }
 
-                                    // "+" -- w ogole change findtrip to post trip cause
                                     IconButton(onClick = {
                                         if (loggedIn) {
                                             showPostTrip = true
                                             showLogin = false; showRegister = false; showUserPanel = false;
-                                            showUserInfo = false; showCarDetail = null
+                                            showUserInfo = false; showCarDetail = null; showMyTripsScreen = false; showJoinTripDialogForTrip = null
                                         } else {
                                             showLogin = true
                                             showPostTrip = false; showRegister = false; showUserPanel = false;
-                                            showUserInfo = false; showCarDetail = null
+                                            showUserInfo = false; showCarDetail = null; showMyTripsScreen = false; showJoinTripDialogForTrip = null
                                             Toast.makeText(context, "Please log in first.", Toast.LENGTH_SHORT).show()
                                         }
                                     }) {
@@ -205,14 +225,20 @@ class MainActivity : ComponentActivity() {
                                         )
                                     }
 
-                                    // default
+                                    // was default --> navigato to tripviewscreen
                                     IconButton(onClick = {
-                                        showLogin = false; showRegister = false; showPostTrip = false;
-                                        showUserPanel = false; showUserInfo = false; showCarDetail = null
+                                        if (loggedIn) {
+                                            showMyTripsScreen = true
+                                            showLogin = false; showRegister = false; showPostTrip = false;
+                                            showUserPanel = false; showUserInfo = false; showCarDetail = null; showJoinTripDialogForTrip = null
+                                        } else {
+                                            showLogin = true
+                                            Toast.makeText(context, "Please log in first.", Toast.LENGTH_SHORT).show()
+                                        }
                                     }) {
                                         Icon(
                                             imageVector = Icons.Filled.Menu,
-                                            contentDescription = "View trips"
+                                            contentDescription = "My Trips"
                                         )
                                     }
                                 }
@@ -228,8 +254,9 @@ class MainActivity : ComponentActivity() {
                                 onLoginSuccess = {
                                     loggedIn = true
                                     showLogin = false
+                                    // !EFAULT WHEN LOGGED IN TO START
                                     showPostTrip = false; showRegister = false; showUserPanel = false;
-                                    showUserInfo = false; showCarDetail = null
+                                    showUserInfo = false; showCarDetail = null; showMyTripsScreen = false; showJoinTripDialogForTrip = null
                                 },
                                 onNavigateToRegister = {
                                     showLogin = false
@@ -241,7 +268,7 @@ class MainActivity : ComponentActivity() {
                                     loggedIn = true
                                     showRegister = false
                                     showPostTrip = false; showLogin = false; showUserPanel = false;
-                                    showUserInfo = false; showCarDetail = null
+                                    showUserInfo = false; showCarDetail = null; showMyTripsScreen = false; showJoinTripDialogForTrip = null
                                 },
                                 onNavigateToLogin = {
                                     showRegister = false
@@ -264,7 +291,10 @@ class MainActivity : ComponentActivity() {
                                 car = showCarDetail!!,
                                 onBack = { showCarDetail = null }
                             )
-                            // default screen, change column na lazy pozniej
+                            showMyTripsScreen -> TripViewScreen(
+                                db = database,
+                                onBack = { showMyTripsScreen = false }
+                            )
                             else -> {
                                 Scaffold(
                                     topBar = {
@@ -278,40 +308,60 @@ class MainActivity : ComponentActivity() {
                                             contentPadding = PaddingValues(8.dp),
                                             verticalArrangement = Arrangement.spacedBy(8.dp)
                                         ) {
-                                            items(trips, key = { it.id }) { trip ->
-                                                val isExpanded = expandedTripIds.contains(trip.id)
-                                                Card(
-                                                    modifier = Modifier
-                                                        .fillMaxWidth()
-                                                        .clickable {
-                                                            if (isExpanded) {
-                                                                expandedTripIds.remove(trip.id)
-                                                            } else {
-                                                                expandedTripIds.add(trip.id)
-                                                            }
-                                                        },
-                                                    elevation = CardDefaults.cardElevation(4.dp)
-                                                ) {
-                                                    Column(modifier = Modifier.padding(16.dp)) {
+                                            if (tripsMainScreen.isEmpty()) {
+                                                item {
+                                                    Box(
+                                                        modifier = Modifier
+                                                            .fillParentMaxSize()
+                                                            .padding(16.dp),
+                                                        contentAlignment = Alignment.Center
+                                                    ) {
                                                         Text(
-                                                            text = "Trip #${trip.id}",
-                                                            style = MaterialTheme.typography.titleMedium
+                                                            "No available trips at the moment.",
+                                                            style = MaterialTheme.typography.headlineSmall
                                                         )
-                                                        Spacer(modifier = Modifier.height(4.dp))
-                                                        Text(
-                                                            text = "From: ${locationsMap[trip.startLocationId] ?: "Loading..."}"
-                                                        )
-                                                        Text(
-                                                            text = "To: ${locationsMap[trip.endLocationId] ?: "Loading..."}"
-                                                        )
-
-                                                        if (isExpanded) {
-                                                            Spacer(modifier = Modifier.height(8.dp))
-                                                            Text("Planned hour: ${trip.plannedHour}")
-                                                            Text("Capacity: ${trip.passengerCapacity}")
-                                                            Text("Current Passengers: ${trip.currentPassengers}")
-                                                            Text("Trip state: ${trip.tripState}")
-                                                            Text("Car ID: ${trip.carId}")
+                                                    }
+                                                }
+                                            } else {
+                                                items(tripsMainScreen, key = { it.id }) { trip ->
+                                                    val cardBackgroundColor = when {
+                                                        userDriverTrips.contains(trip.id) -> Color(0xffa4ffa4)
+                                                        userPassengerTrips.contains(trip.id) -> Color(0xFF91D2FF)
+                                                        else -> MaterialTheme.colorScheme.surfaceVariant
+                                                    }
+                                                    Card(
+                                                        modifier = Modifier
+                                                            .fillMaxWidth()
+                                                            .clickable {
+                                                                if (loggedIn) {
+                                                                    showJoinTripDialogForTrip = trip
+                                                                } else {
+                                                                    showLogin = true
+                                                                    Toast.makeText(context, "Please log in to join a trip.", Toast.LENGTH_SHORT).show()
+                                                                }
+                                                            },
+                                                        elevation = CardDefaults.cardElevation(4.dp),
+                                                        colors = CardDefaults.cardColors(containerColor = cardBackgroundColor)
+                                                    ) {
+                                                        Column(modifier = Modifier.padding(16.dp)) {
+                                                            Text(
+                                                                text = "Trip #${trip.id}",
+                                                                style = MaterialTheme.typography.titleMedium
+                                                            )
+                                                            Spacer(modifier = Modifier.height(4.dp))
+                                                            Text(
+                                                                text = "From: ${locationsOnMainScreen[trip.startLocationId]}"
+                                                            )
+                                                            Text(
+                                                                text = "To: ${locationsOnMainScreen[trip.endLocationId]}"
+                                                            )
+                                                            Spacer(modifier = Modifier.height(4.dp))
+                                                            Text(
+                                                                text = "Passengers: ${trip.currentPassengers}/${trip.passengerCapacity}",
+                                                            )
+                                                            Text(
+                                                                text = "State: ${trip.tripState.replaceFirstChar { it.uppercase() }}",
+                                                            )
                                                         }
                                                     }
                                                 }
@@ -319,6 +369,44 @@ class MainActivity : ComponentActivity() {
                                         }
                                     }
                                 )
+
+                                showJoinTripDialogForTrip?.let { tripToJoin ->
+                                    JoinTripDialog(
+                                        db = database,
+                                        trip = tripToJoin,
+                                        onDismiss = { showJoinTripDialogForTrip = null },
+                                        onJoinSuccess = {
+                                            coroutineScope.launch {
+                                                val fetchedPlannedTrips = database.tripDao().getTripsByState("planned")
+                                                tripsMainScreen = fetchedPlannedTrips
+
+                                                val currentUserId = UserSession.currentUserId
+                                                if (currentUserId != null) {
+                                                    val allUserTrips = database.tripDao().getTripsWithUser(
+                                                        currentUserId.toLong()
+                                                    )
+                                                    userDriverTrips = allUserTrips.filter { it.userId == currentUserId.toInt() }.map { it.id }.toSet()
+                                                    val passengerTrips = database.tripPassengerDao().getTripsForPassenger(
+                                                        currentUserId.toLong()
+                                                    )
+                                                    userPassengerTrips = passengerTrips.map { it.tripId }.toSet()
+                                                }
+                                            }
+                                            showJoinTripDialogForTrip = null
+                                            Toast.makeText(context, "joined Trip #${tripToJoin.id}!", Toast.LENGTH_SHORT).show()
+                                        },
+                                        onAlreadyJoined = {
+                                            showJoinTripDialogForTrip = null
+                                            Toast.makeText(context, "!!You have registered and then cancelled", Toast.LENGTH_SHORT).show()
+                                        },
+                                        onTripFull = {
+                                            showJoinTripDialogForTrip = null
+                                            Toast.makeText(context, "trip is full.", Toast.LENGTH_SHORT).show()
+                                        },
+                                        isDriver = userDriverTrips.contains(tripToJoin.id),
+                                        isPassenger = userPassengerTrips.contains(tripToJoin.id)
+                                    )
+                                }
                             }
                         }
                     }
@@ -326,4 +414,76 @@ class MainActivity : ComponentActivity() {
             }
         }
     }
+}
+
+// New Composable for the Join Trip Dialog
+@Composable
+fun JoinTripDialog(
+    db: AppDB,
+    trip: Trip,
+    onDismiss: () -> Unit,
+    onJoinSuccess: () -> Unit,
+    onAlreadyJoined: () -> Unit,
+    onTripFull: () -> Unit,
+    isDriver: Boolean,
+    isPassenger: Boolean
+) {
+    val coroutineScope = rememberCoroutineScope()
+    val currentUserId = UserSession.currentUserId
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Join Trip #${trip.id}?") },
+        text = {
+            Column {
+                Text("From: ${trip.startLocationId} To: ${trip.endLocationId}")
+                Text("Time: ${trip.plannedHour}:00")
+                Text("Available seats: ${trip.passengerCapacity - trip.currentPassengers}")
+                Spacer(modifier = Modifier.height(8.dp))
+                if (isDriver) {
+                    Text("You are the driver of this trip.", color = MaterialTheme.colorScheme.primary)
+                } else if (isPassenger) {
+                    Text("You are already a passenger on this trip.", color = MaterialTheme.colorScheme.primary)
+                } else if (trip.currentPassengers >= trip.passengerCapacity) {
+                    Text("This trip is full.", color = MaterialTheme.colorScheme.error)
+                } else if (trip.tripState != "planned") {
+                    Text("This trip is ${trip.tripState}.", color = MaterialTheme.colorScheme.error)
+                }
+            }
+        },
+        confirmButton = {
+            val canJoin = currentUserId != null && !isDriver && !isPassenger &&
+                    trip.currentPassengers < trip.passengerCapacity && trip.tripState == "planned"
+
+            Button(
+                onClick = {
+                    if (canJoin) {
+                        coroutineScope.launch {
+                            val newTripPassenger = TripPassenger(
+                                tripId = trip.id,
+                                passengerId = currentUserId!!.toLong()
+                            )
+                            db.tripPassengerDao().insert(newTripPassenger)
+
+                            val updatedTrip = trip.copy(currentPassengers = trip.currentPassengers + 1)
+                            db.tripDao().update(updatedTrip)
+                            onJoinSuccess()
+                        }
+                    } else if (isPassenger) {
+                        onAlreadyJoined()
+                    } else if (trip.currentPassengers >= trip.passengerCapacity) {
+                        onTripFull()
+                    }
+                },
+                enabled = canJoin // Only enable if eligible to join
+            ) {
+                Text("Join")
+            }
+        },
+        dismissButton = {
+            Button(onClick = onDismiss) {
+                Text("Cancel")
+            }
+        }
+    )
 }

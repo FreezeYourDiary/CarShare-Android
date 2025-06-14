@@ -18,6 +18,14 @@ interface TripDao {
 
 //    @Query("SELECT * FROM trips WHERE userId = :userId ORDER BY plannedTime ASC")
 //    suspend fun getByUserSortedByTime(userId: Int): List<Trip>
+
+    @Query("SELECT * FROM trips WHERE id = :tripId")
+    suspend fun getById(tripId: Long): Trip? // fetch 1 trip
+
+    // USER IS DRIVER OR PASSENGER BUT ON A TRIP
+    @Query("SELECT DISTINCT t.* FROM trips t LEFT JOIN trip_passengers tp ON t.id = tp.tripId WHERE t.userId = :userId OR tp.passengerId = :userId ORDER BY t.id DESC")
+    suspend fun getTripsWithUser(userId: Long): List<Trip>
+
     @Delete suspend fun delete(trip: Trip)
     @Update suspend fun update(trip: Trip)
 

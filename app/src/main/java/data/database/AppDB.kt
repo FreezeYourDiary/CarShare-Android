@@ -9,14 +9,15 @@ import data.dao.*
 import data.entities.*
 
 @Database(
-    entities = [User::class, Car::class, Trip::class, Location::class],
-    version = 4
+    entities = [User::class, Car::class, Trip::class, Location::class, TripPassenger::class ],
+    version = 5
 )
 abstract class AppDB : RoomDatabase() {
     abstract fun userDao(): UserDao
     abstract fun carDao(): CarDao
     abstract fun tripDao(): TripDao
     abstract fun locationDao(): LocationDao
+    abstract fun tripPassengerDao(): TripPassengerDao
 
     companion object {
         @Volatile

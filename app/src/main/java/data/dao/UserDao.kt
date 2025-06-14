@@ -26,6 +26,6 @@ interface UserDao {
     suspend fun deleteAll()
 
     @Query("SELECT * FROM users WHERE id = :userId LIMIT 1")
-    suspend fun getUserById(userId: Int): User?
+    suspend fun getUserById(userId: Long): User?
     // flow return type for in real time data?
 }

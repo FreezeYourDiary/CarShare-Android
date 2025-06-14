@@ -1,6 +1,5 @@
 package com.example.carshare.ui.screens
 
-import android.widget.Toast
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
@@ -11,7 +10,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -41,7 +39,7 @@ fun UserInfo(db: AppDB, onBack: () -> Unit) {
     LaunchedEffect(userId) {
         if (userId != null) {
             coroutineScope.launch {
-                currentUser.value = db.userDao().getUserById(userId)
+                currentUser.value = db.userDao().getUserById(userId.toLong())
             }
             // wymaga check type mismatch Int? Int. teoretycznie nie mozliwy else
         } else {
@@ -77,9 +75,9 @@ fun UserInfo(db: AppDB, onBack: () -> Unit) {
         }
 
         Spacer(modifier = Modifier.height(10.dp))
-//        Button(onClick = onBack, modifier = Modifier.fillMaxWidth()) {
-//            Text("Back")
-//        }
+        Button(onClick = onBack, modifier = Modifier.fillMaxWidth()) {
+            Text("Back")
+        }
     }
 }
 
