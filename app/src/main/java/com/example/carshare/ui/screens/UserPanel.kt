@@ -30,7 +30,6 @@ enum class CarColor(val displayName: String) {
     DARK_BROWN("Dark Brown"),
     METALLIC("Metallic")
 }
-
 enum class CarModel(val displayName: String) {
     SEDAN("Sedan"),
     SUV("SUV"),
@@ -42,7 +41,6 @@ enum class State(val displayName: String) {
     Poor("Poor"),
     Good("Good"),
 }
-
 enum class Producent(val displayName: String) {
     TOYOTA("Toyota"),
     HONDA("Honda"),
@@ -55,6 +53,7 @@ enum class Producent(val displayName: String) {
     KIA("Kia"),
     NISSAN("Nissan")
 }
+
 @Composable
 fun UserPanel(db: AppDB, onBack: () -> Unit) {
     var producentInput by remember { mutableStateOf("") }
@@ -85,57 +84,65 @@ fun UserPanel(db: AppDB, onBack: () -> Unit) {
             cars.clear()
             cars.addAll(db.carDao().getCarsForUser(userId))
             // tez teoretycznie type mismatch issue dlatego instrukcja warunkowa
+        } else {
+            cars.clear()
+            // nie wystapi
+            // Toast.makeText(context, "log in to see and manage cars.", Toast.LENGTH_SHORT).show()
         }
-//        else {
-//            cars.clear()
-//            Toast.makeText(context, "Please log in to see and manage your cars.", Toast.LENGTH_SHORT).show()
-//        }
     }
 
-    Column(
+    LazyColumn(
         modifier = Modifier
             .padding(16.dp)
             .fillMaxSize(),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
 
-        Text("Manage Your Cars", style = MaterialTheme.typography.titleLarge)
-        Spacer(modifier = Modifier.height(16.dp))
+        item {
+            Text("Manage Your Cars", style = MaterialTheme.typography.titleLarge)
+            Spacer(modifier = Modifier.height(16.dp))
+        }
 
         if (showForm) {
-            Column {
-                OutlinedTextField(
-                    value = producentInput,
-                    onValueChange = {
-                        producentInput = it
-                        producentMenuExpanded = true
-                        selectedProducent = null
-                    },
-                    label = { Text("Producent") },
-                    shape = RoundedCornerShape(50),
-                    modifier = Modifier.fillMaxWidth()
-                )
-                DropdownMenu(
-                    expanded = producentMenuExpanded && producentInput.isNotBlank(),
-                    onDismissRequest = { producentMenuExpanded = false }
-                ) {
-                    Producent.values()
-                        .filter { it.displayName.contains(producentInput, ignoreCase = true) }
-                        .forEach { producent ->
-                            DropdownMenuItem(
-                                text = { Text(producent.displayName) },
-                                onClick = {
-                                    selectedProducent = producent
-                                    producentInput = producent.displayName
-                                    producentMenuExpanded = false
-                                }
-                            )
-                        }
-                }
 
-                // Model Dropdown
-                Box {
-                    OutlinedButton (
+            item {
+                Column(modifier = Modifier.fillMaxWidth()) {
+                    OutlinedTextField(
+                        value = producentInput,
+                        onValueChange = {
+                            producentInput = it
+                            producentMenuExpanded = true
+                            selectedProducent = null
+                        },
+                        label = { Text("Producent") },
+                        shape = RoundedCornerShape(50),
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                    DropdownMenu(
+                        expanded = producentMenuExpanded && producentInput.isNotBlank(),
+                        onDismissRequest = { producentMenuExpanded = false },
+                        modifier = Modifier.fillMaxWidth(0.8f)
+                    ) {
+                        Producent.values()
+                            .filter { it.displayName.contains(producentInput, ignoreCase = true) }
+                            .forEach { producent ->
+                                DropdownMenuItem(
+                                    text = { Text(producent.displayName) },
+                                    onClick = {
+                                        selectedProducent = producent
+                                        producentInput = producent.displayName
+                                        producentMenuExpanded = false
+                                    }
+                                )
+                            }
+                    }
+                    Spacer(modifier = Modifier.height(12.dp))
+                }
+            }
+
+            item { // Model Dropdown
+                Box(modifier = Modifier.fillMaxWidth()) {
+                    OutlinedButton(
                         onClick = { modelMenuExpanded = true },
                         modifier = Modifier.fillMaxWidth()
                     ) {
@@ -143,7 +150,8 @@ fun UserPanel(db: AppDB, onBack: () -> Unit) {
                     }
                     DropdownMenu(
                         expanded = modelMenuExpanded,
-                        onDismissRequest = { modelMenuExpanded = false }
+                        onDismissRequest = { modelMenuExpanded = false },
+                        modifier = Modifier.fillMaxWidth(0.8f)
                     ) {
                         CarModel.values().forEach { model ->
                             DropdownMenuItem(
@@ -156,7 +164,10 @@ fun UserPanel(db: AppDB, onBack: () -> Unit) {
                         }
                     }
                 }
+                Spacer(modifier = Modifier.height(12.dp))
+            }
 
+            item {
                 OutlinedTextField(
                     value = year,
                     onValueChange = { year = it },
@@ -165,9 +176,11 @@ fun UserPanel(db: AppDB, onBack: () -> Unit) {
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                     shape = RoundedCornerShape(50)
                 )
+                Spacer(modifier = Modifier.height(12.dp))
+            }
 
-                // Color Dropdown
-                Box {
+            item { // Color Dropdown
+                Box(modifier = Modifier.fillMaxWidth()) {
                     OutlinedButton(
                         onClick = { colorMenuExpanded = true },
                         modifier = Modifier.fillMaxWidth()
@@ -176,7 +189,8 @@ fun UserPanel(db: AppDB, onBack: () -> Unit) {
                     }
                     DropdownMenu(
                         expanded = colorMenuExpanded,
-                        onDismissRequest = { colorMenuExpanded = false }
+                        onDismissRequest = { colorMenuExpanded = false },
+                        modifier = Modifier.fillMaxWidth(0.8f)
                     ) {
                         CarColor.values().forEach { color ->
                             DropdownMenuItem(
@@ -189,9 +203,11 @@ fun UserPanel(db: AppDB, onBack: () -> Unit) {
                         }
                     }
                 }
+                Spacer(modifier = Modifier.height(12.dp))
+            }
 
-                // State Dropdown
-                Box {
+            item {
+                Box(modifier = Modifier.fillMaxWidth()) {
                     OutlinedButton(
                         onClick = { stateMenuExpanded = true },
                         modifier = Modifier.fillMaxWidth()
@@ -200,7 +216,8 @@ fun UserPanel(db: AppDB, onBack: () -> Unit) {
                     }
                     DropdownMenu(
                         expanded = stateMenuExpanded,
-                        onDismissRequest = { stateMenuExpanded = false }
+                        onDismissRequest = { stateMenuExpanded = false },
+                        modifier = Modifier.fillMaxWidth(0.8f)
                     ) {
                         State.values().forEach { state ->
                             DropdownMenuItem(
@@ -213,7 +230,10 @@ fun UserPanel(db: AppDB, onBack: () -> Unit) {
                         }
                     }
                 }
+                Spacer(modifier = Modifier.height(12.dp))
+            }
 
+            item {
                 OutlinedTextField(
                     value = plate,
                     onValueChange = { plate = it },
@@ -221,167 +241,261 @@ fun UserPanel(db: AppDB, onBack: () -> Unit) {
                     modifier = Modifier.fillMaxWidth(),
                     shape = RoundedCornerShape(50)
                 )
-
                 Spacer(modifier = Modifier.height(16.dp))
             }
         }
-        Button(
-            onClick = {
-                if (
-                    showForm &&
-                    producentInput.isNotBlank() &&
-                    selectedModel != null &&
-                    year.isNotBlank() &&
-                    selectedColor != null &&
-                    selectedState != null &&
-                    plate.isNotBlank() &&
-                    userId != null
-                ) {
-                    val carYear = year.toIntOrNull()
-                    if (carYear == null || carYear <= 1900 || carYear > 2025) {
-                        Toast.makeText(context, "Please enter a valid year.", Toast.LENGTH_SHORT).show()
-                        return@Button
-                    }
 
-                    coroutineScope.launch {
-                        db.carDao().insert(
-                            Car(
-                                // w db w tabeli wpis name tu producent  + model
-                                name = "${producentInput.trim()} ${selectedModel.displayName}",
-                                year = carYear,
-                                color = selectedColor.displayName,
-                                state = selectedState.displayName,
-                                plate = plate,
-                                ownerUserId = userId
+        item { // add/confirm car
+            Button(
+                onClick = {
+                    // val name = "{producentInput.trim()} + {selectedModel.displayName}" //?
+                    if (
+                        showForm &&
+                        producentInput.isNotBlank() &&
+                        selectedProducent != null &&
+                        year.isNotBlank() &&
+                        selectedColor != null &&
+                        selectedState != null &&
+                        plate.isNotBlank() &&
+                        userId != null
+                    ) {
+                        val carYear = year.toIntOrNull()
+                        if (carYear == null || carYear <= 1900 || carYear > 2025) {
+                            Toast.makeText(context, "Please enter a valid year between 1901 and 2025.", Toast.LENGTH_SHORT).show()
+                            return@Button
+                        }
+
+                        coroutineScope.launch {
+                            db.carDao().insert(
+                                Car(
+                                    name = "${producentInput.trim()} ${selectedModel.displayName}",
+                                    // name = name,
+                                    year = carYear,
+                                    color = selectedColor.displayName,
+                                    state = selectedState.displayName,
+                                    plate = plate,
+                                    ownerUserId = userId
+                                )
                             )
-                        )
-                        cars.clear()
-                        cars.addAll(db.carDao().getCarsForUser(userId))
+                            cars.clear()
+                            cars.addAll(db.carDao().getCarsForUser(userId))
+                            // defaults
+                            producentInput = ""
+                            selectedProducent = null
+                            selectedModel = CarModel.SEDAN
+                            selectedColor = CarColor.BLACK
+                            selectedState = State.Good
+                            year = ""
+                            plate = ""
 
-                        producentInput = ""
-                        selectedProducent = null
-                        selectedModel = CarModel.SEDAN
-                        selectedColor = CarColor.BLACK
-                        selectedState = State.Good
-                        year = ""
-                        plate = ""
-
-                        Toast.makeText(context, "Car added successfully!", Toast.LENGTH_SHORT).show()
-                        showForm = false
+                            Toast.makeText(context, "Car added successfully!", Toast.LENGTH_SHORT).show()
+                            showForm = false
+                        }
+                    } else {
+                        showForm = !showForm
+                        if (showForm) {
+                            producentInput = ""
+                            selectedProducent = null
+                            selectedModel = CarModel.SEDAN
+                            selectedColor = CarColor.BLACK
+                            selectedState = State.Good
+                            year = ""
+                            plate = ""
+                        }
                     }
-                } else {
-                    showForm = !showForm
-                }
-            },
-            modifier = Modifier.fillMaxWidth()
-        ) {
-            Text(if (showForm) "Confirm" else "Add Car")
+                },
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Text(if (showForm) "Confirm" else "Add Car")
+            }
+            Spacer(modifier = Modifier.height(16.dp))
         }
-        Text("Your Cars:", style = MaterialTheme.typography.titleMedium)
-        Spacer(modifier = Modifier.height(8.dp))
+
+        item {
+            Text("Your Cars:", style = MaterialTheme.typography.titleMedium)
+            Spacer(modifier = Modifier.height(8.dp))
+        }
 
         if (cars.isEmpty()) {
-            Text("No cars added")
+            item {
+                Text("No cars added")
+            }
         } else {
-            LazyColumn(modifier = Modifier.weight(1f)) {
-                items(cars) { car ->
-                    var showEditDialog by remember { mutableStateOf(false) }
+            items(cars) { car ->
+                var showEditDialog by remember { mutableStateOf(false) }
 
-                    if (showEditDialog) {
-                        var editName by remember { mutableStateOf(car.name) }
-                        var editPlate by remember { mutableStateOf(car.plate) }
-                        var editYear by remember { mutableStateOf(car.year.toString()) }
+                if (showEditDialog) {
+                    var editName by remember { mutableStateOf(car.name) }
+                    var editPlate by remember { mutableStateOf(car.plate) }
+                    var editYear by remember { mutableStateOf(car.year.toString()) }
+                    var editColor by remember { mutableStateOf(CarColor.valueOf(car.color.uppercase().replace(" ", "_"))) } //  string to enum
+                    var editState by remember { mutableStateOf(State.valueOf(car.state)) }
+                    var editColorMenuExpanded by remember { mutableStateOf(false) }
+                    var editStateMenuExpanded by remember { mutableStateOf(false) }
 
-                        AlertDialog(
-                            onDismissRequest = { showEditDialog = false },
-                            confirmButton = {
-                                TextButton(onClick = {
-                                    val updatedCar = car.copy(
-                                        name = editName,
-                                        plate = editPlate,
-                                        year = editYear.toIntOrNull() ?: car.year
-                                    )
-                                    coroutineScope.launch {
-                                        db.carDao().update(updatedCar)
-                                        cars.clear()
-                                        if (userId != null) {
-                                            cars.addAll(db.carDao().getCarsForUser(userId))
+
+                    AlertDialog(
+                        onDismissRequest = { showEditDialog = false },
+                        confirmButton = {
+                            TextButton(onClick = {
+                                val updatedCar = car.copy(
+                                    name = editName,
+                                    plate = editPlate,
+                                    year = editYear.toIntOrNull() ?: car.year,
+                                    color = editColor.displayName,
+                                    state = editState.displayName
+                                )
+                                coroutineScope.launch {
+                                    db.carDao().update(updatedCar)
+                                    cars.clear()
+                                    if (userId != null) {
+                                        cars.addAll(db.carDao().getCarsForUser(userId))
+                                    }
+                                }
+                                showEditDialog = false
+                            }) {
+                                Text("Update")
+                            }
+                        },
+                        dismissButton = {
+                            TextButton(onClick = { showEditDialog = false }) {
+                                Text("Cancel")
+                            }
+                        },
+                        title = { Text("Edit Car") },
+                        text = {
+                            Column {
+                                OutlinedTextField(
+                                    value = editName,
+                                    onValueChange = { editName = it },
+                                    label = { Text("Name (Producent & Model)") },
+                                    modifier = Modifier.fillMaxWidth()
+                                )
+                                Spacer(modifier = Modifier.height(8.dp))
+                                OutlinedTextField(
+                                    value = editPlate,
+                                    onValueChange = { editPlate = it },
+                                    label = { Text("License Plate") },
+                                    modifier = Modifier.fillMaxWidth()
+                                )
+                                Spacer(modifier = Modifier.height(8.dp))
+                                OutlinedTextField(
+                                    value = editYear,
+                                    onValueChange = { editYear = it },
+                                    label = { Text("Year") },
+                                    modifier = Modifier.fillMaxWidth(),
+                                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number)
+                                )
+                                Spacer(modifier = Modifier.height(8.dp))
+                                Box(modifier = Modifier.fillMaxWidth()) {
+                                    OutlinedButton(
+                                        onClick = { editColorMenuExpanded = true },
+                                        modifier = Modifier.fillMaxWidth()
+                                    ) {
+                                        Text("Color: ${editColor.displayName}")
+                                    }
+                                    DropdownMenu(
+                                        expanded = editColorMenuExpanded,
+                                        onDismissRequest = { editColorMenuExpanded = false },
+                                        modifier = Modifier.fillMaxWidth(0.8f)
+                                    ) {
+                                        CarColor.values().forEach { color ->
+                                            DropdownMenuItem(
+                                                text = { Text(color.displayName) },
+                                                onClick = {
+                                                    editColor = color
+                                                    editColorMenuExpanded = false
+                                                }
+                                            )
                                         }
                                     }
-                                    showEditDialog = false
-                                }) {
-                                    Text("Update")
                                 }
-                            },
-                            dismissButton = {
-                                TextButton(onClick = { showEditDialog = false }) {
-                                    Text("Cancel")
-                                }
-                            },
-                            title = { Text("Edit Car") },
-                            text = {
-                                Column {
-                                    OutlinedTextField(
-                                        value = editName,
-                                        onValueChange = { editName = it },
-                                        label = { Text("Name") },
+                                Spacer(modifier = Modifier.height(8.dp))
+//                                Card(
+//                                    modifier = Modifier
+//                                        .fillMaxWidth()
+//                                        .padding(vertical = 4.dp)
+//                                ) {
+//                                    Column(modifier = Modifier.padding(16.dp)) {
+//                                        Text("Name: ${car.name}")
+//                                        Text("Plate: ${car.plate}")
+//                                        Text("Year: ${car.year}")
+//                                        Text("Color: ${car.color}")
+//                                        Text("State: ${car.state}")
+//
+//                                        Spacer(modifier = Modifier.height(8.dp))
+//                                        Row(
+//                                            modifier = Modifier.fillMaxWidth(),
+//                                            horizontalArrangement = Arrangement.SpaceBetween
+//                                        ) {
+//                                            OutlinedButton(onClick = {
+//                                                coroutineScope.launch {
+//                                                    db.carDao().delete(car)
+//                                                    cars.remove(car)
+                                Box(modifier = Modifier.fillMaxWidth()) {
+                                    OutlinedButton(
+                                        onClick = { editStateMenuExpanded = true },
                                         modifier = Modifier.fillMaxWidth()
-                                    )
-//                                    OutlinedTextField(
-//                                        value = editPlate,
-//                                        onValueChange = { editPlate = it },
-//                                        label = { Text("Plate") },
-//                                        modifier = Modifier.fillMaxWidth()
-//                                    )
-//                                    OutlinedTextField(
-//                                        value = editYear,
-//                                        onValueChange = { editYear = it },
-//                                        label = { Text("Year") },
-//                                        modifier = Modifier.fillMaxWidth(),
-//                                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number)
-//                                    )
+                                    ) {
+                                        Text("State: ${editState.displayName}")
+                                    }
+                                    DropdownMenu(
+                                        expanded = editStateMenuExpanded,
+                                        onDismissRequest = { editStateMenuExpanded = false },
+                                        modifier = Modifier.fillMaxWidth(0.8f)
+                                    ) {
+                                        State.values().forEach { state ->
+                                            DropdownMenuItem(
+                                                text = { Text(state.displayName) },
+                                                onClick = {
+                                                    editState = state
+                                                    editStateMenuExpanded = false
+                                                }
+                                            )
+                                        }
+                                    }
                                 }
                             }
-                        )
-                    }
+                        }
+                    )
+                }
 
-                    Card(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(vertical = 4.dp)
-                    ) {
-                        Column(modifier = Modifier.padding(16.dp)) {
-                            Text("Name: ${car.name}")
-                            Text("Plate: ${car.plate}")
-                            Text("Year: ${car.year}")
-                            Text("Color: ${car.color}")
-                            Text("State: ${car.state}")
+                Card(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(vertical = 4.dp)
+                ) {
+                    Column(modifier = Modifier.padding(16.dp)) {
+                        Text("Name: ${car.name}")
+                        Text("Plate: ${car.plate}")
+                        Text("Year: ${car.year}")
+                        Text("Color: ${car.color}")
+                        Text("State: ${car.state}")
 
-                            Spacer(modifier = Modifier.height(8.dp))
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.SpaceBetween
-                            ) {
-                                OutlinedButton(onClick = {
-                                    coroutineScope.launch {
-                                        db.carDao().delete(car)
-                                        cars.remove(car)
-                                    }
-                                }) {
-                                    Icon(
-                                        imageVector = Icons.Filled.Delete,
-                                        contentDescription = "",
-                                    )
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            OutlinedButton(onClick = {
+                                coroutineScope.launch {
+                                    db.carDao().delete(car)
+                                    cars.remove(car)
                                 }
+                            }) {
+                                Icon(
+                                    imageVector = Icons.Filled.Delete,
+                                    contentDescription = "Delete Car",
+                                )
+                            }
 
-                                OutlinedButton(onClick = {
-                                    showEditDialog = true
-                                }) {
-                                    Icon(
-                                        imageVector = Icons.Filled.Edit,
-                                        contentDescription = "",
-                                    )
-                                }
+                            OutlinedButton(onClick = {
+                                showEditDialog = true
+                            }) {
+                                Icon(
+                                    imageVector = Icons.Filled.Edit,
+                                    contentDescription = "Edit Car",
+                                )
                             }
                         }
                     }
@@ -389,10 +503,11 @@ fun UserPanel(db: AppDB, onBack: () -> Unit) {
             }
         }
 
-        Spacer(modifier = Modifier.height(16.dp))
-
-        Button(onClick = onBack, modifier = Modifier.fillMaxWidth()) {
-            Text("Back")
+        item {
+            Spacer(modifier = Modifier.height(16.dp))
+            Button(onClick = onBack, modifier = Modifier.fillMaxWidth()) {
+                Text("Back")
+            }
         }
     }
 }

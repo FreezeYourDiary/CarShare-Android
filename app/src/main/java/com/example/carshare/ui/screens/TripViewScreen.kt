@@ -108,7 +108,7 @@ fun TripViewScreen(
                                         contentAlignment = Alignment.Center
                                     ) {
                                         Text(
-                                            "no available trips found",
+                                            "no booked trips found",
                                             style = MaterialTheme.typography.headlineSmall
                                         )
                                     }

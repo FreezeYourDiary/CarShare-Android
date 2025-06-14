@@ -1,5 +1,6 @@
 package com.example.carshare.ui.screens
 
+import android.util.Log
 import android.widget.Toast
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -10,6 +11,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.Button
 import androidx.compose.material3.Checkbox
@@ -48,117 +50,178 @@ fun RegisterScreen(onRegisterSuccess: () -> Unit, onNavigateToLogin: () -> Unit)
     var isDriver by remember { mutableStateOf(false) }
     var error by remember { mutableStateOf<String?>(null) }
 
-    Column(
+    val isEmailValid by remember(email) { mutableStateOf(email.contains("@")) }
+    // ^\d{9,}$ -- starts with  9 digits
+    val isPhoneValid by remember(phone) { mutableStateOf(phone.matches(Regex("^\\d{9,}$"))) }
+    val isNameValid by remember(name) { mutableStateOf(name.isNotBlank()) }
+    val isPasswordValid by remember(password) { mutableStateOf(password.isNotBlank()) }
+
+
+    LazyColumn(
         modifier = Modifier
             .fillMaxSize()
-            .padding(20.dp),
+            .padding(24.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center
     ) {
-        Text("Register")
-
-        Spacer(modifier = Modifier.height(12.dp))
-
-        OutlinedTextField(
-            value = name,
-            onValueChange = { name = it },
-            label = { Text("Name") },
-            modifier = Modifier.fillMaxWidth()
-        )
-
-        Spacer(modifier = Modifier.height(6.dp))
-
-        OutlinedTextField(
-            value = email,
-            onValueChange = { email = it },
-            label = { Text("Email") },
-            modifier = Modifier.fillMaxWidth(),
-            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email)
-        )
-
-        Spacer(modifier = Modifier.height(6.dp))
-
-        OutlinedTextField(
-            value = phone,
-            onValueChange = { phone = it },
-            label = { Text("Phone") },
-            modifier = Modifier.fillMaxWidth(),
-            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone)
-        )
-
-        Spacer(modifier = Modifier.height(6.dp))
-
-        OutlinedTextField(
-            value = password,
-            onValueChange = { password = it },
-            label = { Text("Password") },
-            modifier = Modifier.fillMaxWidth(),
-            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password)
-        )
-
-        Spacer(modifier = Modifier.height(6.dp))
-
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
-            modifier = Modifier.fillMaxWidth()
-        ) {
-            Checkbox(
-                checked = isDriver,
-                onCheckedChange = {
-                    isDriver = it
-                    userType = if (it) "driver" else "passenger"
-                }
+        item {
+            Text(
+                text = "Register",
+                style = MaterialTheme.typography.headlineSmall
             )
-            Spacer(modifier = Modifier.width(6.dp))
-            Text("I am also a driver")
+            Spacer(modifier = Modifier.height(24.dp))
         }
 
-        Spacer(modifier = Modifier.height(21.dp))
+        item {
+            OutlinedTextField(
+                value = name,
+                onValueChange = {
+                    name = it
+                    if (error != null && it.isNotBlank()) error = null
+                },
+                label = { Text("Name") },
+                modifier = Modifier.fillMaxWidth(),
+                isError = !isNameValid && name.isNotBlank()
+            )
+            Spacer(modifier = Modifier.height(12.dp))
+        }
+        // val emailHasError = !isEmailValid && email.isNotBlank()
+        item {
+            OutlinedTextField(
+                value = email,
+                onValueChange = {
+                    email = it
+                    if (error != null && it.isNotBlank()) error = null
+                },
+                label = { Text("Email") },
+                modifier = Modifier.fillMaxWidth(),
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email),
+                isError = !isEmailValid && email.isNotBlank(),
+                supportingText = {
+                   // if (emailHasError) {
+                        if (!isEmailValid && email.isNotBlank()) {
+                            Text("Email must contain '@'")
+                        }
+                    }
+                //}
+            )
+            Spacer(modifier = Modifier.height(12.dp))
+        }
 
-        Button(
-            onClick = {
-                if (name.isBlank() || email.isBlank() || phone.isBlank() || password.isBlank()) {
-                    error = "all fields required"
-                    Toast.makeText(context, error, Toast.LENGTH_SHORT).show()
-                    return@Button
+        item {
+            OutlinedTextField(
+                value = phone,
+                onValueChange = {
+                    phone = it
+                    if (error != null && it.isNotBlank()) error = null
+                },
+                label = { Text("Phone") },
+                modifier = Modifier.fillMaxWidth(),
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone),
+                isError = !isPhoneValid && phone.isNotBlank(),
+                supportingText = {
+                    if (!isPhoneValid && phone.isNotBlank()) {
+                        Text("Phone must be at least 9 digits, no spaces or special characters.")
+                    }
                 }
+            )
+            Spacer(modifier = Modifier.height(12.dp))
+        }
 
-                coroutineScope.launch {
-                    val existingUser = db.userDao().findByEmail(email)
-                    if (existingUser != null) {
-                        error = "User with this email already exists."
-                        Toast.makeText(context, error, Toast.LENGTH_SHORT).show()
-                    } else {
-                        val userId = db.userDao().insert(
-                            User(
+        item {
+            OutlinedTextField(
+                value = password,
+                onValueChange = {
+                    password = it
+                    if (error != null && it.isNotBlank()) error = null
+                },
+                label = { Text("Password") },
+                modifier = Modifier.fillMaxWidth(),
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
+                isError = !isPasswordValid && password.isNotBlank()
+            )
+
+            Spacer(modifier = Modifier.height(12.dp))
+        }
+
+        item {
+            Column(modifier = Modifier.fillMaxWidth(), horizontalAlignment = Alignment.Start) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.Start
+                ) {
+                    Checkbox(
+                        checked = isDriver,
+                        onCheckedChange = {
+                            isDriver = it
+                            userType = if (it) "driver" else "passenger"
+                        }
+                    )
+                    Spacer(modifier = Modifier.width(6.dp))
+                    Text("I am also a driver")
+                }
+            }
+            Spacer(modifier = Modifier.height(24.dp))
+        }
+
+        item {
+            // val allFieldsFilled = listOf(name, email, phone, password).all { it.isNotBlank() }
+            Button(
+                // if (!allFieldsFilled) {
+                    //     error = "All fields required."
+                    //     return@Button
+                    // }
+                onClick = {
+                    if (name.isBlank() || email.isBlank() || phone.isBlank() || password.isBlank()) {
+                        error = "All fields required."
+                        return@Button
+                    }
+                    if (!isEmailValid) {
+                        error = "Not valid email."
+                        return@Button
+                    }
+                    if (!isPhoneValid) {
+                        error = "Please enter a valid phone number (9 digits no characters)."
+                        return@Button
+                    }
+                    coroutineScope.launch {
+                        val existingUser = db.userDao().findByEmail(email)
+                        if (existingUser != null) {
+                            error = "User with this email already exists."
+                            Toast.makeText(context, error, Toast.LENGTH_SHORT).show()
+                        } else {
+                            val newUser = User(
                                 name = name,
                                 email = email,
                                 phone = phone,
                                 password = password,
                                 type = userType
                             )
-                        ).toInt()
-                        UserSession.currentUserId = userId
-                        error = null
-                        Toast.makeText(context, "credentials ok", Toast.LENGTH_SHORT).show()
-                        onRegisterSuccess()
+                            val userId = db.userDao().insert(newUser).toInt()
+                            UserSession.currentUserId = userId
+                            error = null
+                            Toast.makeText(context, "Registration successful!", Toast.LENGTH_SHORT).show()
+                            // Log.v("+user", "${newUser}")
+                            onRegisterSuccess()
+                        }
                     }
-                }
-            },
-            modifier = Modifier.fillMaxWidth()
-        ) {
-            Text("Register")
+                },
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Text("Register")
+            }
+
+            Spacer(modifier = Modifier.height(12.dp))
         }
 
-        Spacer(modifier = Modifier.height(8.dp))
-
-        TextButton(onClick = onNavigateToLogin) {
-            Text("Already have an account? Login here.")
-        }
-
-        error?.let {
-            Spacer(modifier = Modifier.height(4.dp))
-            Text(it, color = MaterialTheme.colorScheme.error)
+        item {
+            TextButton(onClick = onNavigateToLogin) {
+                Text("Already have an account? Login here.")
+            }
+            error?.let {
+                Spacer(modifier = Modifier.height(8.dp))
+                Text(it, color = MaterialTheme.colorScheme.error)
+            }
         }
     }
 }
